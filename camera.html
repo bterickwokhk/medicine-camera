@@ -14,7 +14,9 @@
 <script>
 
 navigator.mediaDevices.getUserMedia({
-  video:true
+video:{
+  facingMode:"environment"
+}
 })
 .then(stream=>{
   document.getElementById("video").srcObject=stream;
