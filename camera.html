@@ -7,78 +7,30 @@
 
 <title>Medicine Scanner</title>
 
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 
 <style>
 
 body{
+
 font-family:Arial,"Microsoft JhengHei";
+
 text-align:center;
+
 margin:10px;
+
 }
 
 
 #reader{
 
 width:100%;
+
 max-width:500px;
-margin:auto;
-
-}
-
-
-/* OCR same style as scanner */
-
-#ocrContainer{
-
-position:relative;
-
-width:350px;
-
-height:180px;
 
 margin:auto;
-
-display:none;
-
-overflow:hidden;
-
-border-radius:8px;
-
-}
-
-
-#ocrVideo{
-
-width:350px;
-
-height:180px;
-
-object-fit:cover;
-
-}
-
-
-#ocrBox{
-
-position:absolute;
-
-top:0;
-
-left:0;
-
-width:350px;
-
-height:180px;
-
-border:3px solid #00ff00;
-
-border-radius:8px;
-
-box-sizing:border-box;
 
 }
 
@@ -96,24 +48,6 @@ font-weight:bold;
 
 
 
-button{
-
-padding:12px 20px;
-
-font-size:18px;
-
-border:none;
-
-border-radius:8px;
-
-background:#2196F3;
-
-color:white;
-
-margin-top:10px;
-
-}
-
 </style>
 
 
@@ -123,39 +57,20 @@ margin-top:10px;
 <body>
 
 
-<h2>📷 Medicine Scanner</h2>
+<h2>📷 Barcode / QR Scanner</h2>
+
 
 
 <div id="reader"></div>
 
 
 
-<div id="ocrContainer">
-
-<video id="ocrVideo"
-autoplay
-playsinline>
-</video>
-
-<div id="ocrBox"></div>
-
-</div>
-
-
-
-<button onclick="startOCR()">
-
-🔤 Scan Text
-
-</button>
-
-
-
 <div id="result">
 
-Waiting...
+掃瞄中...
 
 </div>
+
 
 
 
@@ -164,6 +79,11 @@ Waiting...
 
 let finished=false;
 
+
+
+// ============================
+// Send result back
+// ============================
 
 
 function sendBack(value,type){
@@ -175,9 +95,16 @@ if(finished)return;
 finished=true;
 
 
+
 document.getElementById("result").innerHTML=
 
-type+"<br>"+value;
+type+
+"<br>"+
+value;
+
+
+
+console.log(type,value);
 
 
 
@@ -196,6 +123,7 @@ scanType:type
 },"*");
 
 
+
 setTimeout(()=>{
 
 window.close();
@@ -205,14 +133,16 @@ window.close();
 
 }
 
+
 }
 
 
 
 
 
+
 // ============================
-// Barcode + QR
+// Barcode + QR Scanner
 // ============================
 
 
@@ -222,16 +152,20 @@ const scanner = new Html5QrcodeScanner(
 
 {
 
+
 fps:15,
 
 
 qrbox:{
 
+
 width:350,
 
 height:140
 
+
 },
+
 
 
 rememberLastUsedCamera:true,
@@ -245,36 +179,51 @@ formatsToSupport:[
 
 Html5QrcodeSupportedFormats.EAN_13,
 
+
 Html5QrcodeSupportedFormats.EAN_8,
+
 
 Html5QrcodeSupportedFormats.CODE_128,
 
+
 Html5QrcodeSupportedFormats.CODE_39,
+
 
 Html5QrcodeSupportedFormats.UPC_A,
 
+
 Html5QrcodeSupportedFormats.QR_CODE
+
 
 ]
 
 
 },
 
+
 false
 
+
 );
+
+
 
 
 
 scanner.render(
 
+
 (decodedText)=>{
 
 
 sendBack(
+
 decodedText,
+
 "BARCODE / QR"
+
 );
+
 
 
 scanner.clear();
@@ -282,288 +231,19 @@ scanner.clear();
 
 },
 
-(error)=>{}
+
+(error)=>{
+
+
+// keep scanning
+
+
+}
+
+
 
 );
 
-
-
-
-
-
-// ============================
-// OCR
-// ============================
-
-
-let stream;
-
-
-
-function startOCR(){
-
-
-document.getElementById("reader")
-.style.display="none";
-
-
-let box=document.getElementById("ocrContainer");
-
-let video=document.getElementById("ocrVideo");
-
-
-box.style.display="block";
-
-
-
-navigator.mediaDevices.getUserMedia({
-
-video:{
-
-facingMode:"environment",
-
-width:{
-ideal:1920
-},
-
-height:{
-ideal:1080
-}
-
-}
-
-})
-
-.then(s=>{
-
-
-stream=s;
-
-video.srcObject=s;
-
-
-
-video.onloadedmetadata=()=>{
-
-
-setTimeout(()=>{
-
-readOCR(video);
-
-},1500);
-
-
-};
-
-
-})
-
-.catch(e=>{
-
-alert(e);
-
-});
-
-
-}
-
-
-
-
-
-
-
-function readOCR(video){
-
-
-if(finished)return;
-
-
-
-let canvas=document.createElement("canvas");
-
-
-canvas.width=1600;
-
-canvas.height=800;
-
-
-
-let ctx=canvas.getContext("2d");
-
-
-
-// green box area
-
-let sx=video.videoWidth*0.20;
-
-let sy=video.videoHeight*0.35;
-
-let sw=video.videoWidth*0.60;
-
-let sh=video.videoHeight*0.30;
-
-
-
-ctx.drawImage(
-
-video,
-
-sx,
-
-sy,
-
-sw,
-
-sh,
-
-0,
-
-0,
-
-1600,
-
-800
-
-);
-
-
-
-
-// grayscale only
-
-let img=ctx.getImageData(
-
-0,
-
-0,
-
-1600,
-
-800
-
-);
-
-
-
-let d=img.data;
-
-
-
-for(let i=0;i<d.length;i+=4){
-
-
-let gray=
-
-0.299*d[i]+
-0.587*d[i+1]+
-0.114*d[i+2];
-
-
-d[i]=gray;
-
-d[i+1]=gray;
-
-d[i+2]=gray;
-
-
-}
-
-
-
-ctx.putImageData(
-
-img,
-
-0,
-
-0
-
-);
-
-
-
-
-
-document.getElementById("result").innerHTML=
-
-"Reading...";
-
-
-
-
-
-Tesseract.recognize(
-
-canvas,
-
-'eng',
-
-{
-
-logger:m=>console.log(m),
-
-
-tessedit_pageseg_mode:7,
-
-
-tessedit_char_whitelist:
-
-"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-
-}
-
-
-)
-
-.then(({data:{text}})=>{
-
-
-let txt=text
-
-.replace(/[^A-Za-z0-9]/g," ")
-
-.trim();
-
-
-
-console.log(txt);
-
-
-
-if(txt.length>=2){
-
-
-sendBack(
-
-txt,
-
-"OCR TEXT"
-
-);
-
-
-}
-
-else{
-
-
-setTimeout(()=>{
-
-readOCR(video);
-
-},1500);
-
-
-}
-
-
-
-});
-
-
-
-}
 
 
 </script>
