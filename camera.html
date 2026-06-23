@@ -16,13 +16,9 @@
 <style>
 
 body{
-
 font-family:Arial,"Microsoft JhengHei";
-
 text-align:center;
-
 margin:10px;
-
 }
 
 
@@ -31,23 +27,20 @@ margin:10px;
 #reader{
 
 width:100%;
-
 max-width:500px;
-
 margin:auto;
 
 }
 
 
 
-/* OCR scanner same size as barcode box */
+/* OCR same size as barcode */
 
 #ocrContainer{
 
 position:relative;
 
 width:350px;
-
 height:140px;
 
 margin:auto;
@@ -65,7 +58,6 @@ border-radius:8px;
 #ocrVideo{
 
 width:350px;
-
 height:140px;
 
 object-fit:cover;
@@ -79,11 +71,9 @@ object-fit:cover;
 position:absolute;
 
 top:0;
-
 left:0;
 
 width:350px;
-
 height:140px;
 
 border:3px solid #00ff00;
@@ -128,8 +118,6 @@ margin-top:10px;
 
 }
 
-
-
 </style>
 
 
@@ -142,14 +130,9 @@ margin-top:10px;
 <h2>📷 Medicine Scanner</h2>
 
 
-
-<!-- Barcode / QR -->
-
 <div id="reader"></div>
 
 
-
-<!-- OCR -->
 
 <div id="ocrContainer">
 
@@ -164,10 +147,6 @@ playsinline>
 
 
 </div>
-
-
-
-<br>
 
 
 
@@ -187,15 +166,18 @@ Waiting...
 
 
 
+
+
 <script>
 
 
 let finished=false;
 
 
-// ===============================
-// Send result back
-// ===============================
+
+// ===========================
+// Return result
+// ===========================
 
 
 function sendBack(value,type){
@@ -210,9 +192,11 @@ finished=true;
 
 document.getElementById("result").innerHTML=
 
-type+
-"<br>"+
-value;
+type+"<br>"+value;
+
+
+
+console.log(type,value);
 
 
 
@@ -242,7 +226,6 @@ window.close();
 }
 
 
-
 }
 
 
@@ -250,12 +233,13 @@ window.close();
 
 
 
-// ===============================
-// Barcode / QR scanner
-// ===============================
+// ===========================
+// Barcode + QR
+// ===========================
 
 
 const scanner =
+
 new Html5QrcodeScanner(
 
 "reader",
@@ -298,13 +282,12 @@ Html5QrcodeSupportedFormats.QR_CODE
 
 ]
 
+
 },
 
 false
 
 );
-
-
 
 
 
@@ -322,17 +305,15 @@ decodedText,
 );
 
 
-
 scanner.clear();
 
 
 },
 
 
-(error)=>{
+(error)=>{}
 
 
-}
 
 );
 
@@ -342,10 +323,9 @@ scanner.clear();
 
 
 
-
-// ===============================
-// OCR scanner
-// ===============================
+// ===========================
+// OCR
+// ===========================
 
 
 let ocrStream;
@@ -356,7 +336,9 @@ function startOCR(){
 
 
 
-document.getElementById("reader").style.display="none";
+document.getElementById("reader")
+.style.display="none";
+
 
 
 let container=
@@ -374,6 +356,7 @@ container.style.display="block";
 
 navigator.mediaDevices.getUserMedia({
 
+
 video:{
 
 
@@ -381,19 +364,19 @@ facingMode:"environment",
 
 
 width:{
-ideal:1280
+ideal:1920
 },
 
 
 height:{
-ideal:720
+ideal:1080
 }
 
 
 }
+
 
 })
-
 
 
 .then(stream=>{
@@ -444,6 +427,7 @@ alert(
 
 
 
+
 function captureText(video){
 
 
@@ -454,10 +438,11 @@ if(finished)return;
 let canvas=document.createElement("canvas");
 
 
+// high resolution OCR
 
-canvas.width=700;
+canvas.width=1600;
 
-canvas.height=280;
+canvas.height=640;
 
 
 
@@ -466,7 +451,7 @@ canvas.getContext("2d");
 
 
 
-// only capture focus area
+// capture green box area
 
 let sx=
 video.videoWidth*0.25;
@@ -501,9 +486,70 @@ sh,
 
 0,
 
-700,
+1600,
 
-280
+640
+
+);
+
+
+
+
+
+// grayscale + threshold
+
+let img=
+ctx.getImageData(
+
+0,
+
+0,
+
+canvas.width,
+
+canvas.height
+
+);
+
+
+
+let data=img.data;
+
+
+
+for(let i=0;i<data.length;i+=4){
+
+
+let gray=
+
+0.299*data[i]+
+0.587*data[i+1]+
+0.114*data[i+2];
+
+
+
+gray = gray > 150 ? 255 : 0;
+
+
+
+data[i]=gray;
+
+data[i+1]=gray;
+
+data[i+2]=gray;
+
+
+}
+
+
+
+ctx.putImageData(
+
+img,
+
+0,
+
+0
 
 );
 
@@ -521,43 +567,64 @@ document.getElementById("result").innerHTML=
 
 Tesseract.recognize(
 
+
 canvas,
+
 
 'eng',
 
+
 {
+
 
 logger:function(m){
 
 console.log(m);
 
-}
+},
+
+
+// English + number only
+
+tessedit_char_whitelist:
+
+"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-"
+
 
 }
+
 
 )
+
 
 
 .then(({data:{text}})=>{
 
 
-let txt=text.trim();
+let result=text
+
+.replace(/[^A-Za-z0-9.\-]/g," ")
+
+.trim();
 
 
 
 console.log(
+
 "OCR:",
-txt
+
+result
+
 );
 
 
 
-if(txt.length>1){
+if(result.length>1){
 
 
 sendBack(
 
-txt,
+result,
 
 "OCR TEXT"
 
@@ -592,6 +659,7 @@ console.log(err);
 
 
 });
+
 
 
 }
