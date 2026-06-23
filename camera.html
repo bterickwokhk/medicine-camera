@@ -1,22 +1,29 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 
 <head>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Barcode Scanner</title>
+<title>藥物掃描</title>
 
+
+<!-- Barcode / QR scanner -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+
+<!-- OCR -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
 
 <style>
 
 body{
-  font-family: Arial;
+  font-family:Arial,"Microsoft JhengHei";
   text-align:center;
   margin:10px;
 }
+
 
 #reader{
   width:100%;
@@ -24,13 +31,36 @@ body{
   margin:auto;
 }
 
+
+#ocrVideo{
+  width:100%;
+  max-width:500px;
+  display:none;
+}
+
+
 #result{
-  margin-top:20px;
-  font-size:20px;
-  font-weight:bold;
+
+ margin-top:20px;
+ font-size:20px;
+ font-weight:bold;
+
+}
+
+
+button{
+
+ padding:12px 20px;
+ font-size:18px;
+ border-radius:8px;
+ border:none;
+ background:#4caf50;
+ color:white;
+
 }
 
 </style>
+
 
 </head>
 
@@ -38,10 +68,21 @@ body{
 <body>
 
 
-<h2>📷 藥物條碼掃描</h2>
+<h2>📷 藥物條碼 / QR / 文字掃描</h2>
 
 
 <div id="reader"></div>
+
+
+<video id="ocrVideo" autoplay></video>
+
+
+<br>
+
+
+<button onclick="startOCR()">
+🔤 讀取藥物文字
+</button>
 
 
 <div id="result">
@@ -53,126 +94,347 @@ body{
 <script>
 
 
-// =======================
-// Send barcode back
-// =======================
-
-function sendBack(code){
-
-  document.getElementById("result").innerHTML =
-    "條碼: " + code;
+let finished=false;
 
 
-  console.log("Sending:", code);
+// =============================
+// Send result back
+// =============================
+
+function sendBack(value,type){
 
 
-  if(window.opener){
+if(finished) return;
 
-    window.opener.postMessage(
-      {
-        type:"barcode",
-        code:code
-      },
-      "*"
-    );
+finished=true;
 
 
-    // close after send
-
-    setTimeout(function(){
-
-      window.close();
-
-    },1000);
+document.getElementById("result").innerHTML =
+type+" : "+value;
 
 
-  }
-  else{
 
-    console.log("No opener window");
+console.log(type,value);
 
-  }
+
+
+if(window.opener){
+
+
+window.opener.postMessage(
+{
+type:"barcode",
+code:value,
+scanType:type
+},
+"*"
+);
+
+
+
+setTimeout(()=>{
+
+window.close();
+
+},1000);
+
+
+}
+
+
+}
+
+
+// =============================
+// Barcode / QR scanner
+// =============================
+
+
+const scanner =
+new Html5QrcodeScanner(
+
+"reader",
+
+{
+
+fps:15,
+
+
+qrbox:
+{
+width:350,
+height:130
+},
+
+
+rememberLastUsedCamera:true,
+
+
+disableFlip:true,
+
+
+formatsToSupport:[
+
+
+Html5QrcodeSupportedFormats.EAN_13,
+
+Html5QrcodeSupportedFormats.EAN_8,
+
+Html5QrcodeSupportedFormats.CODE_128,
+
+Html5QrcodeSupportedFormats.CODE_39,
+
+Html5QrcodeSupportedFormats.UPC_A,
+
+Html5QrcodeSupportedFormats.QR_CODE
+
+
+]
+
+
+},
+
+false
+
+);
+
+
+
+scanner.render(
+
+(decodedText)=>{
+
+
+sendBack(
+decodedText,
+"Barcode/QR"
+);
+
+
+scanner.clear();
+
+
+},
+
+
+(error)=>{
+
+// keep scanning
+
+}
+
+
+);
+
+
+
+// =============================
+// OCR fallback
+// =============================
+
+
+setTimeout(()=>{
+
+
+if(!finished){
+
+console.log(
+"No barcode found, OCR ready"
+);
+
+
+document.getElementById("result").innerHTML=
+"可開始文字辨識";
+
+
+}
+
+
+},5000);
+
+
+
+
+// =============================
+// Start OCR
+// =============================
+
+
+let stream;
+
+
+
+function startOCR(){
+
+
+if(finished)return;
+
+
+
+document.getElementById("ocrVideo")
+.style.display="block";
+
+
+
+navigator.mediaDevices.getUserMedia({
+
+video:{
+facingMode:"environment"
+}
+
+})
+
+
+.then(s=>{
+
+
+stream=s;
+
+
+let video=
+document.getElementById("ocrVideo");
+
+
+video.srcObject=stream;
+
+
+
+setTimeout(()=>{
+
+
+captureText(video);
+
+
+
+},3000);
+
+
+
+})
+
+
+.catch(err=>{
+
+
+alert(
+"Camera error: "+err
+);
+
+
+});
+
+
 
 }
 
 
 
-// =======================
-// Scanner
-// =======================
 
 
-const scanner = new Html5QrcodeScanner(
-
-  "reader",
-
-  {
-
-    fps:15,
-
-    qrbox:{
-      width:320,
-      height:180
-    },
+function captureText(video){
 
 
-    rememberLastUsedCamera:true,
+if(finished)return;
 
 
-    formatsToSupport:[
 
-      Html5QrcodeSupportedFormats.EAN_13,
+let canvas=
+document.createElement("canvas");
 
-      Html5QrcodeSupportedFormats.EAN_8,
 
-      Html5QrcodeSupportedFormats.CODE_128,
 
-      Html5QrcodeSupportedFormats.CODE_39,
+canvas.width=
+video.videoWidth;
 
-      Html5QrcodeSupportedFormats.UPC_A,
 
-      Html5QrcodeSupportedFormats.QR_CODE
+canvas.height=
+video.videoHeight;
 
-    ]
 
-  },
 
-  false
+let ctx=
+canvas.getContext("2d");
+
+
+
+ctx.drawImage(
+
+video,
+
+0,
+
+0,
+
+canvas.width,
+
+canvas.height
 
 );
 
 
 
-// success
 
-scanner.render(
-
-  function(decodedText, decodedResult){
+document.getElementById("result").innerHTML=
+"文字辨識中...";
 
 
-    console.log(
-      "Detected:",
-      decodedText
-    );
+
+Tesseract.recognize(
+
+canvas,
+
+'eng+chi_tra',
+
+{
+
+logger:m=>{
+
+console.log(m);
+
+}
+
+}
 
 
-    sendBack(decodedText);
+)
+
+.then(({data:{text}})=>{
 
 
-    scanner.clear();
+text=text.trim();
 
 
-  },
+
+if(text.length>2){
 
 
-  function(errorMessage){
-
-    // scanning continues
-
-  }
-
-
+sendBack(
+text,
+"OCR文字"
 );
+
+
+}
+
+
+
+else{
+
+
+document.getElementById("result").innerHTML=
+"沒有讀到文字，請再試";
+
+
+}
+
+
+
+});
+
+
+
+}
+
 
 
 </script>
