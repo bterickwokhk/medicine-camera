@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Medicine Scanner</title>
-
+<title>Barcode Scanner</title>
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
@@ -14,42 +13,24 @@
 <style>
 
 body{
-
-font-family:Arial,"Microsoft JhengHei";
-
-text-align:center;
-
-margin:10px;
-
+  font-family: Arial;
+  text-align:center;
+  margin:10px;
 }
-
 
 #reader{
-
-width:100%;
-
-max-width:500px;
-
-margin:auto;
-
+  width:100%;
+  max-width:500px;
+  margin:auto;
 }
-
-
 
 #result{
-
-margin-top:20px;
-
-font-size:20px;
-
-font-weight:bold;
-
+  margin-top:20px;
+  font-size:20px;
+  font-weight:bold;
 }
 
-
-
 </style>
-
 
 </head>
 
@@ -57,189 +38,219 @@ font-weight:bold;
 <body>
 
 
-<h2>📷 Barcode / QR Scanner</h2>
-
+<h2>📷 藥物條碼掃描</h2>
 
 
 <div id="reader"></div>
 
 
-
 <div id="result">
-
-掃瞄中...
-
+等待掃描...
 </div>
-
 
 
 
 <script>
 
 
-let finished=false;
+// =======================
+// Beep sound
+// =======================
+
+function beep(){
+
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  const oscillator = audioCtx.createOscillator();
+
+  const gainNode = audioCtx.createGain();
 
 
+  oscillator.type = "sine";
 
-// ============================
-// Send result back
-// ============================
-
-
-function sendBack(value,type){
+  oscillator.frequency.value = 1000; // beep frequency
 
 
-if(finished)return;
+  gainNode.gain.value = 0.3; // volume
 
 
-finished=true;
+  oscillator.connect(gainNode);
+
+  gainNode.connect(audioCtx.destination);
 
 
-
-document.getElementById("result").innerHTML=
-
-type+
-"<br>"+
-value;
+  oscillator.start();
 
 
+  setTimeout(function(){
 
-console.log(type,value);
+    oscillator.stop();
 
+    audioCtx.close();
 
-
-if(window.opener){
-
-
-window.opener.postMessage({
-
-type:"barcode",
-
-code:value,
-
-scanType:type
-
-
-},"*");
-
-
-
-setTimeout(()=>{
-
-window.close();
-
-},1000);
-
-
-}
-
+  },150);
 
 }
 
 
 
+// =======================
+// Send barcode back
+// =======================
+
+function sendBack(code){
+
+  document.getElementById("result").innerHTML =
+    "條碼: " + code;
+
+
+  console.log("Sending:", code);
 
 
 
-// ============================
-// Barcode + QR Scanner
-// ============================
+  if(window.opener){
+
+
+    window.opener.postMessage(
+
+      {
+        type:"barcode",
+        code:code
+      },
+
+      "*"
+
+    );
+
+
+
+    // close after send
+
+    setTimeout(function(){
+
+      window.close();
+
+    },1000);
+
+
+  }
+
+  else{
+
+    console.log("No opener window");
+
+  }
+
+
+}
+
+
+
+
+// =======================
+// Scanner
+// =======================
 
 
 const scanner = new Html5QrcodeScanner(
 
-"reader",
+  "reader",
 
-{
-
-
-fps:15,
+  {
 
 
-qrbox:{
+    fps:15,
 
 
-width:350,
+    qrbox:{
 
-height:140
+      width:320,
 
+      height:180
 
-},
-
-
-
-rememberLastUsedCamera:true,
+    },
 
 
-disableFlip:true,
+    rememberLastUsedCamera:true,
 
 
-formatsToSupport:[
+    formatsToSupport:[
 
 
-Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_13,
 
 
-Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.EAN_8,
 
 
-Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_128,
 
 
-Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.CODE_39,
 
 
-Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_A,
 
 
-Html5QrcodeSupportedFormats.QR_CODE
+      Html5QrcodeSupportedFormats.QR_CODE
 
 
-]
+    ]
 
 
-},
+  },
 
 
-false
-
+  false
 
 );
 
 
 
 
+// =======================
+// Scan success
+// =======================
 
 scanner.render(
 
 
-(decodedText)=>{
+  function(decodedText, decodedResult){
 
 
-sendBack(
+    console.log(
 
-decodedText,
+      "Detected:",
 
-"BARCODE / QR"
+      decodedText
 
-);
-
-
-
-scanner.clear();
+    );
 
 
-},
+
+    // 🔊 beep when barcode found
+
+    beep();
 
 
-(error)=>{
+
+    sendBack(decodedText);
 
 
-// keep scanning
+
+    scanner.clear();
 
 
-}
+  },
 
+
+  function(errorMessage){
+
+
+    // keep scanning
+
+
+  }
 
 
 );
