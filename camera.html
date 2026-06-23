@@ -4,94 +4,62 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script src="https://unpkg.com/html5-qrcode"></script>
-
-<style>
-#reader{
-  width:100%;
-  max-width:500px;
-}
-</style>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
 </head>
 
-
 <body>
 
-<h2>藥物條碼掃描</h2>
+<h2>Barcode Test</h2>
 
-<div id="reader"></div>
+<div id="reader" style="width:100%;"></div>
 
-<h3 id="result"></h3>
+<div id="output"></div>
 
 
 <script>
 
 
-function sendBack(code){
+function onScanSuccess(decodedText, decodedResult){
 
-  document.getElementById("result").innerHTML =
-    "找到: "+code;
+    document.getElementById("output").innerHTML =
+    "SCAN: " + decodedText;
 
 
-  // send back to Apps Script
-
-  if(window.opener){
-
-    window.opener.postMessage(
-      code,
-      "*"
-    );
-
-  }
+    console.log(decodedText);
 
 }
 
 
+function onScanFailure(error){
 
-const scanner = new Html5QrcodeScanner(
+    // ignore
 
-  "reader",
+}
 
-  {
 
-    fps:15,
+let html5QrcodeScanner = new Html5QrcodeScanner(
 
-    qrbox:{
-      width:300,
-      height:150
+    "reader",
+
+    {
+        fps: 10,
+        qrbox: {
+            width: 250,
+            height: 120
+        },
+
+        rememberLastUsedCamera:true
     },
 
-    rememberLastUsedCamera:true,
-
-    supportedScanTypes:[
-      Html5QrcodeScanType.SCAN_TYPE_CAMERA
-    ]
-
-  }
+    false
 
 );
 
 
-scanner.render(
-
-  function(decodedText){
-
-      console.log(decodedText);
-
-      sendBack(decodedText);
-
-      scanner.clear();
-
-  },
-
-
-  function(error){
-
-      // ignore scan errors
-
-  }
-
+html5QrcodeScanner.render(
+    onScanSuccess,
+    onScanFailure
 );
 
 
