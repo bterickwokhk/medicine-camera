@@ -7,7 +7,6 @@
 
 <title>Medicine Scanner</title>
 
-
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -22,8 +21,6 @@ margin:10px;
 }
 
 
-/* Barcode scanner */
-
 #reader{
 
 width:100%;
@@ -33,15 +30,15 @@ margin:auto;
 }
 
 
-
-/* OCR same size as barcode */
+/* OCR same style as scanner */
 
 #ocrContainer{
 
 position:relative;
 
 width:350px;
-height:140px;
+
+height:180px;
 
 margin:auto;
 
@@ -54,16 +51,15 @@ border-radius:8px;
 }
 
 
-
 #ocrVideo{
 
 width:350px;
-height:140px;
+
+height:180px;
 
 object-fit:cover;
 
 }
-
 
 
 #ocrBox{
@@ -71,18 +67,18 @@ object-fit:cover;
 position:absolute;
 
 top:0;
+
 left:0;
 
 width:350px;
-height:140px;
+
+height:180px;
 
 border:3px solid #00ff00;
 
 border-radius:8px;
 
 box-sizing:border-box;
-
-pointer-events:none;
 
 }
 
@@ -136,15 +132,12 @@ margin-top:10px;
 
 <div id="ocrContainer">
 
-
 <video id="ocrVideo"
 autoplay
 playsinline>
 </video>
 
-
 <div id="ocrBox"></div>
-
 
 </div>
 
@@ -166,18 +159,11 @@ Waiting...
 
 
 
-
-
 <script>
 
 
 let finished=false;
 
-
-
-// ===========================
-// Return result
-// ===========================
 
 
 function sendBack(value,type){
@@ -189,14 +175,9 @@ if(finished)return;
 finished=true;
 
 
-
 document.getElementById("result").innerHTML=
 
 type+"<br>"+value;
-
-
-
-console.log(type,value);
 
 
 
@@ -215,7 +196,6 @@ scanType:type
 },"*");
 
 
-
 setTimeout(()=>{
 
 window.close();
@@ -225,22 +205,18 @@ window.close();
 
 }
 
-
 }
 
 
 
 
 
-
-// ===========================
+// ============================
 // Barcode + QR
-// ===========================
+// ============================
 
 
-const scanner =
-
-new Html5QrcodeScanner(
+const scanner = new Html5QrcodeScanner(
 
 "reader",
 
@@ -279,7 +255,6 @@ Html5QrcodeSupportedFormats.UPC_A,
 
 Html5QrcodeSupportedFormats.QR_CODE
 
-
 ]
 
 
@@ -297,11 +272,8 @@ scanner.render(
 
 
 sendBack(
-
 decodedText,
-
 "BARCODE / QR"
-
 );
 
 
@@ -310,10 +282,7 @@ scanner.clear();
 
 },
 
-
 (error)=>{}
-
-
 
 );
 
@@ -322,70 +291,55 @@ scanner.clear();
 
 
 
-
-// ===========================
+// ============================
 // OCR
-// ===========================
+// ============================
 
 
-let ocrStream;
+let stream;
 
 
 
 function startOCR(){
 
 
-
 document.getElementById("reader")
 .style.display="none";
 
 
+let box=document.getElementById("ocrContainer");
 
-let container=
-document.getElementById("ocrContainer");
-
-
-let video=
-document.getElementById("ocrVideo");
+let video=document.getElementById("ocrVideo");
 
 
-
-container.style.display="block";
+box.style.display="block";
 
 
 
 navigator.mediaDevices.getUserMedia({
 
-
 video:{
 
-
 facingMode:"environment",
-
 
 width:{
 ideal:1920
 },
 
-
 height:{
 ideal:1080
 }
 
-
 }
-
 
 })
 
-
-.then(stream=>{
-
-
-ocrStream=stream;
+.then(s=>{
 
 
-video.srcObject=stream;
+stream=s;
+
+video.srcObject=s;
 
 
 
@@ -394,27 +348,19 @@ video.onloadedmetadata=()=>{
 
 setTimeout(()=>{
 
+readOCR(video);
 
-captureText(video);
-
-
-},2000);
+},1500);
 
 
 };
 
 
-
 })
 
+.catch(e=>{
 
-.catch(err=>{
-
-
-alert(
-"Camera error: "+err
-);
-
+alert(e);
 
 });
 
@@ -427,8 +373,7 @@ alert(
 
 
 
-
-function captureText(video){
+function readOCR(video){
 
 
 if(finished)return;
@@ -438,35 +383,25 @@ if(finished)return;
 let canvas=document.createElement("canvas");
 
 
-// high resolution OCR
-
 canvas.width=1600;
 
-canvas.height=640;
+canvas.height=800;
 
 
 
-let ctx=
-canvas.getContext("2d");
+let ctx=canvas.getContext("2d");
 
 
 
-// capture green box area
+// green box area
 
-let sx=
-video.videoWidth*0.25;
+let sx=video.videoWidth*0.20;
 
+let sy=video.videoHeight*0.35;
 
-let sy=
-video.videoHeight*0.40;
+let sw=video.videoWidth*0.60;
 
-
-let sw=
-video.videoWidth*0.50;
-
-
-let sh=
-video.videoHeight*0.20;
+let sh=video.videoHeight*0.30;
 
 
 
@@ -488,55 +423,48 @@ sh,
 
 1600,
 
-640
+800
 
 );
 
 
 
 
+// grayscale only
 
-// grayscale + threshold
-
-let img=
-ctx.getImageData(
+let img=ctx.getImageData(
 
 0,
 
 0,
 
-canvas.width,
+1600,
 
-canvas.height
+800
 
 );
 
 
 
-let data=img.data;
+let d=img.data;
 
 
 
-for(let i=0;i<data.length;i+=4){
+for(let i=0;i<d.length;i+=4){
 
 
 let gray=
 
-0.299*data[i]+
-0.587*data[i+1]+
-0.114*data[i+2];
+0.299*d[i]+
+0.587*d[i+1]+
+0.114*d[i+2];
 
 
+d[i]=gray;
 
-gray = gray > 150 ? 255 : 0;
+d[i+1]=gray;
 
-
-
-data[i]=gray;
-
-data[i+1]=gray;
-
-data[i+2]=gray;
+d[i+2]=gray;
 
 
 }
@@ -559,7 +487,7 @@ img,
 
 document.getElementById("result").innerHTML=
 
-"Reading text...";
+"Reading...";
 
 
 
@@ -567,64 +495,48 @@ document.getElementById("result").innerHTML=
 
 Tesseract.recognize(
 
-
 canvas,
-
 
 'eng',
 
-
 {
 
-
-logger:function(m){
-
-console.log(m);
-
-},
+logger:m=>console.log(m),
 
 
-// English + number only
+tessedit_pageseg_mode:7,
+
 
 tessedit_char_whitelist:
 
-"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-"
-
+"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
 }
 
 
 )
 
-
-
 .then(({data:{text}})=>{
 
 
-let result=text
+let txt=text
 
-.replace(/[^A-Za-z0-9.\-]/g," ")
+.replace(/[^A-Za-z0-9]/g," ")
 
 .trim();
 
 
 
-console.log(
-
-"OCR:",
-
-result
-
-);
+console.log(txt);
 
 
 
-if(result.length>1){
+if(txt.length>=2){
 
 
 sendBack(
 
-result,
+txt,
 
 "OCR TEXT"
 
@@ -638,24 +550,13 @@ else{
 
 setTimeout(()=>{
 
+readOCR(video);
 
-captureText(video);
-
-
-},1000);
+},1500);
 
 
 }
 
-
-
-})
-
-
-.catch(err=>{
-
-
-console.log(err);
 
 
 });
@@ -663,7 +564,6 @@ console.log(err);
 
 
 }
-
 
 
 </script>
