@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="en">
 
 <head>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>藥物掃描</title>
+<title>Medicine Scanner</title>
 
 
-<!-- Barcode / QR scanner -->
+<!-- Barcode / QR -->
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 
@@ -19,48 +19,45 @@
 <style>
 
 body{
-  font-family:Arial,"Microsoft JhengHei";
-  text-align:center;
-  margin:10px;
+font-family:Arial;
+text-align:center;
+margin:10px;
 }
 
 
 #reader{
-  width:100%;
-  max-width:500px;
-  margin:auto;
+width:100%;
+max-width:500px;
+margin:auto;
 }
 
 
 #ocrVideo{
-  width:100%;
-  max-width:500px;
-  display:none;
+width:100%;
+max-width:500px;
+display:none;
 }
 
 
 #result{
-
- margin-top:20px;
- font-size:20px;
- font-weight:bold;
-
+margin-top:20px;
+font-size:20px;
+font-weight:bold;
 }
 
 
 button{
 
- padding:12px 20px;
- font-size:18px;
- border-radius:8px;
- border:none;
- background:#4caf50;
- color:white;
+padding:12px 20px;
+font-size:18px;
+border:0;
+border-radius:8px;
+background:#2196F3;
+color:white;
 
 }
 
 </style>
-
 
 </head>
 
@@ -68,25 +65,28 @@ button{
 <body>
 
 
-<h2>📷 藥物條碼 / QR / 文字掃描</h2>
+<h2>📷 Medicine Scanner</h2>
 
 
 <div id="reader"></div>
 
 
-<video id="ocrVideo" autoplay></video>
+<video id="ocrVideo"
+autoplay
+playsinline>
+</video>
 
 
 <br>
 
 
 <button onclick="startOCR()">
-🔤 讀取藥物文字
+🔤 Scan Text
 </button>
 
 
 <div id="result">
-等待掃描...
+Waiting...
 </div>
 
 
@@ -97,6 +97,7 @@ button{
 let finished=false;
 
 
+
 // =============================
 // Send result back
 // =============================
@@ -104,31 +105,30 @@ let finished=false;
 function sendBack(value,type){
 
 
-if(finished) return;
+if(finished)return;
+
 
 finished=true;
 
 
-document.getElementById("result").innerHTML =
-type+" : "+value;
-
-
-
-console.log(type,value);
+document.getElementById("result").innerHTML=
+type+"<br>"+value;
 
 
 
 if(window.opener){
 
 
-window.opener.postMessage(
-{
+window.opener.postMessage({
+
 type:"barcode",
+
 code:value,
+
 scanType:type
-},
-"*"
-);
+
+
+},"*");
 
 
 
@@ -143,6 +143,7 @@ window.close();
 
 
 }
+
 
 
 // =============================
@@ -160,10 +161,9 @@ new Html5QrcodeScanner(
 fps:15,
 
 
-qrbox:
-{
+qrbox:{
 width:350,
-height:130
+height:140
 },
 
 
@@ -191,7 +191,6 @@ Html5QrcodeSupportedFormats.QR_CODE
 
 ]
 
-
 },
 
 false
@@ -207,7 +206,7 @@ scanner.render(
 
 sendBack(
 decodedText,
-"Barcode/QR"
+"BARCODE / QR"
 );
 
 
@@ -219,84 +218,63 @@ scanner.clear();
 
 (error)=>{
 
-// keep scanning
-
 }
-
 
 );
 
 
 
-// =============================
-// OCR fallback
-// =============================
-
-
-setTimeout(()=>{
-
-
-if(!finished){
-
-console.log(
-"No barcode found, OCR ready"
-);
-
-
-document.getElementById("result").innerHTML=
-"可開始文字辨識";
-
-
-}
-
-
-},5000);
-
-
-
 
 // =============================
-// Start OCR
+// OCR
 // =============================
 
 
-let stream;
+let ocrStream;
 
 
 
 function startOCR(){
 
 
-if(finished)return;
+let video=
+document.getElementById("ocrVideo");
 
 
-
-document.getElementById("ocrVideo")
-.style.display="block";
+video.style.display="block";
 
 
 
 navigator.mediaDevices.getUserMedia({
 
 video:{
-facingMode:"environment"
+
+facingMode:"environment",
+
+width:{
+ideal:1280
+},
+
+height:{
+ideal:720
+}
+
 }
 
 })
 
 
-.then(s=>{
+.then(stream=>{
 
 
-stream=s;
-
-
-let video=
-document.getElementById("ocrVideo");
+ocrStream=stream;
 
 
 video.srcObject=stream;
 
+
+
+video.onloadedmetadata=()=>{
 
 
 setTimeout(()=>{
@@ -305,8 +283,11 @@ setTimeout(()=>{
 captureText(video);
 
 
+},2000);
 
-},3000);
+
+
+};
 
 
 
@@ -324,14 +305,13 @@ alert(
 });
 
 
-
 }
 
 
 
 
-
 function captureText(video){
+
 
 
 if(finished)return;
@@ -375,7 +355,8 @@ canvas.height
 
 
 document.getElementById("result").innerHTML=
-"文字辨識中...";
+"Reading text...";
+
 
 
 
@@ -383,54 +364,76 @@ Tesseract.recognize(
 
 canvas,
 
-'eng+chi_tra',
+'eng',
 
 {
 
-logger:m=>{
+
+logger:function(m){
 
 console.log(m);
 
 }
 
+
 }
 
-
 )
+
 
 .then(({data:{text}})=>{
 
 
-text=text.trim();
+let clean=text.trim();
 
 
 
-if(text.length>2){
+console.log(
+"OCR:",
+clean
+);
+
+
+
+if(clean.length>1){
 
 
 sendBack(
-text,
-"OCR文字"
+
+clean,
+
+"OCR TEXT"
+
 );
 
 
 }
 
-
-
 else{
 
 
 document.getElementById("result").innerHTML=
-"沒有讀到文字，請再試";
+"No text found";
 
 
 }
 
 
 
-});
+})
 
+
+.catch(err=>{
+
+
+console.log(err);
+
+
+document.getElementById("result").innerHTML=
+"OCR error";
+
+
+});
 
 
 }
