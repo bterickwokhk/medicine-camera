@@ -9,7 +9,6 @@
 
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
-
 <style>
 
 body{
@@ -34,24 +33,17 @@ body{
 
 </head>
 
-
 <body>
-
 
 <h2>📷 藥物條碼掃描</h2>
 
-
 <div id="reader"></div>
-
 
 <div id="result">
 等待掃描...
 </div>
 
-
-
 <script>
-
 
 // =======================
 // Beep sound
@@ -65,34 +57,24 @@ function beep(){
 
   const gainNode = audioCtx.createGain();
 
-
   oscillator.type = "sine";
+  oscillator.frequency.value = 1000;
 
-  oscillator.frequency.value = 1000; // beep frequency
-
-
-  gainNode.gain.value = 0.3; // volume
-
+  gainNode.gain.value = 0.3;
 
   oscillator.connect(gainNode);
-
   gainNode.connect(audioCtx.destination);
 
-
   oscillator.start();
-
 
   setTimeout(function(){
 
     oscillator.stop();
-
     audioCtx.close();
 
   },80);
 
 }
-
-
 
 // =======================
 // Send barcode back
@@ -103,28 +85,17 @@ function sendBack(code){
   document.getElementById("result").innerHTML =
     "條碼: " + code;
 
-
   console.log("Sending:", code);
-
-
 
   if(window.opener){
 
-
     window.opener.postMessage(
-
       {
         type:"barcode",
         code:code
       },
-
       "*"
-
     );
-
-
-
-    // close after send
 
     setTimeout(function(){
 
@@ -132,129 +103,110 @@ function sendBack(code){
 
     },300);
 
-
   }
-
   else{
 
     console.log("No opener window");
 
   }
 
-
 }
-
-
-
 
 // =======================
 // Scanner
 // =======================
 
+const html5QrCode = new Html5Qrcode("reader");
 
-const scanner = new Html5QrcodeScanner(
+function startScanner(){
 
-  "reader",
+  Html5Qrcode.getCameras()
+  .then(devices => {
 
-  {
+    if(!devices || devices.length === 0){
 
+      document.getElementById("result").innerHTML =
+        "找不到相機";
 
-fps:30,
+      return;
+    }
 
-qrbox:{
-  width:250,
-  height:120
-},
+    let backCamera = devices.find(device => {
 
+      const label = device.label.toLowerCase();
 
-    rememberLastUsedCamera:true,
+      return (
+        label.includes("back") ||
+        label.includes("rear") ||
+        label.includes("environment")
+      );
 
+    });
 
-    formatsToSupport:[
+    if(!backCamera){
 
+      backCamera = devices[devices.length - 1];
 
-      Html5QrcodeSupportedFormats.EAN_13,
+    }
 
+    console.log("Using camera:", backCamera.label);
 
-      Html5QrcodeSupportedFormats.EAN_8,
+    html5QrCode.start(
 
+      backCamera.id,
 
-      Html5QrcodeSupportedFormats.CODE_128,
+      {
 
+        fps:30,
 
-      Html5QrcodeSupportedFormats.CODE_39,
+        qrbox:{
+          width:300,
+          height:150
+        },
 
+        aspectRatio:1.777
 
-      Html5QrcodeSupportedFormats.UPC_A,
+      },
 
+      function(decodedText){
 
-      Html5QrcodeSupportedFormats.QR_CODE
+        console.log("Detected:", decodedText);
 
+        beep();
 
-    ]
+        sendBack(decodedText);
 
+        html5QrCode.stop();
 
-  },
+      },
 
+      function(errorMessage){
 
-  false
+        // keep scanning
 
-);
-
-
-
-
-// =======================
-// Scan success
-// =======================
-
-scanner.render(
-
-
-  function(decodedText, decodedResult){
-
-
-    console.log(
-
-      "Detected:",
-
-      decodedText
+      }
 
     );
 
+  })
+  .catch(err => {
 
+    console.error(err);
 
-    // 🔊 beep when barcode found
+    document.getElementById("result").innerHTML =
+      "無法開啟相機";
 
-    beep();
+  });
 
+}
 
+// =======================
+// Start immediately
+// =======================
 
-    sendBack(decodedText);
-
-
-
-    scanner.clear();
-
-
-  },
-
-
-  function(errorMessage){
-
-
-    // keep scanning
-
-
-  }
-
-
-);
-
-
+startScanner();
 
 </script>
-
 
 </body>
 
