@@ -11,23 +11,233 @@
 
 <style>
 
-body{
-  font-family:Arial;
-  text-align:center;
-  margin:10px;
+*{
+  box-sizing:border-box;
 }
+
+
+body{
+
+  font-family:
+  "Comic Sans MS",
+  "Microsoft JhengHei",
+  Arial,
+  sans-serif;
+
+  text-align:center;
+
+  margin:0;
+  padding:20px;
+
+  min-height:100vh;
+
+  background:
+    linear-gradient(
+      135deg,
+      #fff6d6,
+      #dff6ff,
+      #ffe0f0
+    );
+
+}
+
+
+
+/* title */
+
+h2{
+
+  margin:10px 0 20px;
+
+  font-size:28px;
+
+  color:#4b3f72;
+
+  text-shadow:
+  2px 2px 0 white;
+
+}
+
+
+
+/* scanner card */
 
 #reader{
+
   width:100%;
-  max-width:700px;
+
+  max-width:520px;
+
   margin:auto;
+
+  padding:15px;
+
+
+  background:white;
+
+
+  border-radius:30px;
+
+
+  box-shadow:
+
+  0 8px 20px rgba(0,0,0,0.15);
+
+
+  overflow:hidden;
+
 }
 
-#result{
-  margin-top:20px;
-  font-size:20px;
-  font-weight:bold;
+
+
+/* camera area */
+
+#reader video{
+
+  border-radius:25px !important;
+
 }
+
+
+
+/* scan line area */
+
+#reader__scan_region{
+
+  border-radius:25px;
+
+}
+
+
+
+/* hide ugly html5 buttons */
+
+#reader button{
+
+  background:#ff9f43;
+
+  border:none;
+
+  color:white;
+
+  font-size:16px;
+
+  font-weight:bold;
+
+  padding:10px 25px;
+
+  border-radius:30px;
+
+  margin-top:15px;
+
+
+  cursor:pointer;
+
+}
+
+
+
+/* result box */
+
+#result{
+
+  margin:25px auto 0;
+
+  max-width:520px;
+
+
+  padding:15px;
+
+
+  background:
+
+  rgba(255,255,255,0.85);
+
+
+  border-radius:25px;
+
+
+  font-size:22px;
+
+  font-weight:bold;
+
+
+  color:#5c5470;
+
+
+  box-shadow:
+
+  0 5px 15px rgba(0,0,0,0.12);
+
+
+}
+
+
+
+/* success animation */
+
+.scan-success{
+
+
+  animation:
+
+  pop 0.3s ease;
+
+}
+
+
+
+@keyframes pop{
+
+
+0%{
+
+ transform:scale(.8);
+
+}
+
+
+100%{
+
+ transform:scale(1);
+
+}
+
+
+}
+
+
+
+/* mobile */
+
+@media(max-width:600px){
+
+
+h2{
+
+font-size:22px;
+
+}
+
+
+#reader{
+
+padding:10px;
+
+border-radius:25px;
+
+}
+
+
+#result{
+
+font-size:18px;
+
+}
+
+
+}
+
 
 </style>
 
