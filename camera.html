@@ -46,33 +46,111 @@ body{
 <script>
 
 // =======================
-// Beep sound
+// Audio Init
+// =======================
+
+let audioCtx = null;
+
+function initAudio(){
+
+  if(audioCtx) return;
+
+  try{
+
+    audioCtx = new (
+      window.AudioContext ||
+      window.webkitAudioContext
+    )();
+
+    const buffer =
+      audioCtx.createBuffer(1,1,22050);
+
+    const source =
+      audioCtx.createBufferSource();
+
+    source.buffer = buffer;
+
+    source.connect(audioCtx.destination);
+
+    source.start(0);
+
+  }
+  catch(err){
+
+    console.log(err);
+
+  }
+
+}
+
+document.addEventListener(
+  "touchstart",
+  initAudio,
+  { once:true }
+);
+
+document.addEventListener(
+  "click",
+  initAudio,
+  { once:true }
+);
+
+// =======================
+// Beep + Vibrate
 // =======================
 
 function beep(){
 
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  try{
 
-  const oscillator = audioCtx.createOscillator();
+    if(!audioCtx){
 
-  const gainNode = audioCtx.createGain();
+      initAudio();
 
-  oscillator.type = "sine";
-  oscillator.frequency.value = 1000;
+    }
 
-  gainNode.gain.value = 0.3;
+    if(audioCtx.state === "suspended"){
 
-  oscillator.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
+      audioCtx.resume();
 
-  oscillator.start();
+    }
 
-  setTimeout(function(){
+    const oscillator =
+      audioCtx.createOscillator();
 
-    oscillator.stop();
-    audioCtx.close();
+    const gainNode =
+      audioCtx.createGain();
 
-  },80);
+    oscillator.type = "square";
+
+    oscillator.frequency.value = 1200;
+
+    gainNode.gain.value = 0.6;
+
+    oscillator.connect(gainNode);
+
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+
+    setTimeout(function(){
+
+      oscillator.stop();
+
+    },120);
+
+    if(navigator.vibrate){
+
+      navigator.vibrate(150);
+
+    }
+
+  }
+  catch(err){
+
+    console.log(err);
+
+  }
 
 }
 
@@ -116,11 +194,13 @@ function sendBack(code){
 // Scanner
 // =======================
 
-const html5QrCode = new Html5Qrcode("reader");
+const html5QrCode =
+  new Html5Qrcode("reader");
 
 function startScanner(){
 
   Html5Qrcode.getCameras()
+
   .then(devices => {
 
     if(!devices || devices.length === 0){
@@ -129,11 +209,13 @@ function startScanner(){
         "找不到相機";
 
       return;
+
     }
 
     let backCamera = devices.find(device => {
 
-      const label = device.label.toLowerCase();
+      const label =
+        device.label.toLowerCase();
 
       return (
         label.includes("back") ||
@@ -145,11 +227,15 @@ function startScanner(){
 
     if(!backCamera){
 
-      backCamera = devices[devices.length - 1];
+      backCamera =
+        devices[devices.length - 1];
 
     }
 
-    console.log("Using camera:", backCamera.label);
+    console.log(
+      "Using camera:",
+      backCamera.label
+    );
 
     html5QrCode.start(
 
@@ -170,7 +256,10 @@ function startScanner(){
 
       function(decodedText){
 
-        console.log("Detected:", decodedText);
+        console.log(
+          "Detected:",
+          decodedText
+        );
 
         beep();
 
@@ -189,6 +278,7 @@ function startScanner(){
     );
 
   })
+
   .catch(err => {
 
     console.error(err);
@@ -201,13 +291,18 @@ function startScanner(){
 }
 
 // =======================
-// Start immediately
+// Start
 // =======================
 
-startScanner();
+window.onload = function(){
+
+  initAudio();
+
+  startScanner();
+
+};
 
 </script>
 
 </body>
-
 </html>
