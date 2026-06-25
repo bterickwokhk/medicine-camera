@@ -3,41 +3,30 @@
 
 <head>
 
-<meta name="viewport"
-content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Scanner</title>
+<title>Barcode Scanner</title>
 
-<script src="https://unpkg.com/@zxing/browser@0.1.5"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <style>
 
-html,
 body{
-margin:0;
-padding:0;
-width:100%;
-height:100%;
-overflow:hidden;
-background:#000;
+  font-family:Arial;
+  text-align:center;
+  margin:10px;
 }
 
-video{
-width:100vw;
-height:100vh;
-object-fit:cover;
+#reader{
+  width:100%;
+  max-width:700px;
+  margin:auto;
 }
 
-#msg{
-position:fixed;
-top:10px;
-left:0;
-right:0;
-text-align:center;
-color:white;
-font-size:18px;
-font-family:Arial;
-z-index:999;
+#result{
+  margin-top:20px;
+  font-size:20px;
+  font-weight:bold;
 }
 
 </style>
@@ -46,197 +35,142 @@ z-index:999;
 
 <body>
 
-<div id="msg">
-對準條碼...
-</div>
+<h2>📷 藥物條碼 / QR Code 掃描</h2>
 
-<video
-id="video"
-autoplay
-playsinline
-muted>
-</video>
+<div id="reader"></div>
+
+<div id="result">
+等待掃描...
+</div>
 
 <script>
 
-let stream;
-let scanning=true;
+// =======================
+// Send barcode back
+// =======================
 
 function sendBack(code){
 
-  scanning=false;
+  document.getElementById("result").innerHTML =
+    "已掃描: " + code;
 
-  document.getElementById("msg").innerHTML=
-  code;
+  console.log("Sending:", code);
 
   if(window.opener){
 
     window.opener.postMessage(
-    {
-      type:"barcode",
-      code:code
-    },
-    "*");
+      {
+        type:"barcode",
+        code:code
+      },
+      "*"
+    );
 
-    setTimeout(()=>{
+    setTimeout(function(){
+
       window.close();
+
     },100);
 
   }
 
 }
 
-async function startBarcodeDetector(){
+// =======================
+// Scanner
+// =======================
 
-  if(
-    !("BarcodeDetector" in window)
-  ){
-    return false;
-  }
+const html5QrCode =
+  new Html5Qrcode("reader");
 
-  const formats=[
-    "qr_code",
-    "ean_13",
-    "ean_8",
-    "code_128",
-    "upc_a",
-    "upc_e"
-  ];
+let scanning = false;
 
-  const detector=
-  new BarcodeDetector({
-    formats:formats
-  });
+function startScanner(){
 
-  stream=
-  await navigator.mediaDevices.getUserMedia({
-    video:{
-      facingMode:{
-        ideal:"environment"
-      },
-      width:{
-        ideal:1280
-      },
-      height:{
-        ideal:720
-      }
-    },
-    audio:false
-  });
+  if(scanning) return;
 
-  const video=
-  document.getElementById("video");
+  scanning = true;
 
-  video.srcObject=stream;
+  html5QrCode.start(
 
-  await video.play();
-
-  async function scan(){
-
-    if(!scanning) return;
-
-    try{
-
-      const codes=
-      await detector.detect(video);
-
-      if(codes.length){
-
-        sendBack(
-          codes[0].rawValue
-        );
-
-        return;
-      }
-
-    }catch(e){}
-
-    requestAnimationFrame(scan);
-
-  }
-
-  scan();
-
-  return true;
-
-}
-
-async function startZXing(){
-
-  const video=
-  document.getElementById("video");
-
-  stream=
-  await navigator.mediaDevices.getUserMedia({
-
-    video:{
-      facingMode:"environment",
-      width:{
-        ideal:1280
-      },
-      height:{
-        ideal:720
-      }
+    {
+      facingMode:"environment"
     },
 
-    audio:false
+    {
 
-  });
+      fps:60,
 
-  video.srcObject=stream;
+      qrbox:{
+        width:600,
+        height:250
+      },
 
-  await video.play();
+      aspectRatio:1.777,
 
-  const reader=
-  new ZXing.BrowserMultiFormatReader();
+      disableFlip:true,
 
-  reader.decodeFromVideoElement(
-    video,
-    result=>{
+      formatsToSupport:[
 
-      if(
-        result &&
-        scanning
-      ){
+        Html5QrcodeSupportedFormats.QR_CODE,
 
-        sendBack(
-          result.getText()
-        );
+        Html5QrcodeSupportedFormats.CODE_128,
 
-      }
+        Html5QrcodeSupportedFormats.EAN_13,
 
-    }
-  );
+        Html5QrcodeSupportedFormats.EAN_8,
 
-}
+        Html5QrcodeSupportedFormats.UPC_A,
 
-async function start(){
+        Html5QrcodeSupportedFormats.UPC_E
 
-  try{
+      ]
 
-    const ok=
-    await startBarcodeDetector();
+    },
 
-    if(!ok){
+    function(decodedText){
 
-      await startZXing();
+      if(!decodedText) return;
+
+      console.log("Detected:",decodedText);
+
+      scanning = false;
+
+      sendBack(decodedText);
+
+      html5QrCode.stop()
+      .catch(()=>{});
+
+    },
+
+    function(errorMessage){
+
+      // ignore
 
     }
 
-  }
-  catch(err){
+  )
 
-    console.log(err);
+  .catch(err=>{
 
-    document.getElementById("msg")
-    .innerHTML=
-    "無法開啟相機";
+    console.error(err);
 
-  }
+    document.getElementById("result").innerHTML =
+      "無法開啟相機";
+
+  });
 
 }
 
-start();
+// =======================
+// Start
+// =======================
+
+window.onload=function(){
+
+  startScanner();
+
+};
 
 </script>
 
