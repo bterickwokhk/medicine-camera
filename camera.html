@@ -12,14 +12,14 @@
 <style>
 
 body{
-  font-family:Arial;
+  font-family: Arial;
   text-align:center;
   margin:10px;
 }
 
 #reader{
   width:100%;
-  max-width:700px;
+  max-width:500px;
   margin:auto;
 }
 
@@ -35,7 +35,7 @@ body{
 
 <body>
 
-<h2>📷 藥物條碼 / QR Code 掃描</h2>
+<h2>📷 藥物條碼掃描</h2>
 
 <div id="reader"></div>
 
@@ -46,13 +46,122 @@ body{
 <script>
 
 // =======================
+// Audio Init
+// =======================
+
+let audioCtx = null;
+
+function initAudio(){
+
+  if(audioCtx) return;
+
+  try{
+
+    audioCtx = new (
+      window.AudioContext ||
+      window.webkitAudioContext
+    )();
+
+    const buffer =
+      audioCtx.createBuffer(1,1,22050);
+
+    const source =
+      audioCtx.createBufferSource();
+
+    source.buffer = buffer;
+
+    source.connect(audioCtx.destination);
+
+    source.start(0);
+
+  }
+  catch(err){
+
+    console.log(err);
+
+  }
+
+}
+
+document.addEventListener(
+  "touchstart",
+  initAudio,
+  { once:true }
+);
+
+document.addEventListener(
+  "click",
+  initAudio,
+  { once:true }
+);
+
+// =======================
+// Beep + Vibrate
+// =======================
+
+function beep(){
+
+  try{
+
+    if(!audioCtx){
+
+      initAudio();
+
+    }
+
+    if(audioCtx.state === "suspended"){
+
+      audioCtx.resume();
+
+    }
+
+    const oscillator =
+      audioCtx.createOscillator();
+
+    const gainNode =
+      audioCtx.createGain();
+
+    oscillator.type = "square";
+
+    oscillator.frequency.value = 1200;
+
+    gainNode.gain.value = 0.6;
+
+    oscillator.connect(gainNode);
+
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+
+    setTimeout(function(){
+
+      oscillator.stop();
+
+    },120);
+
+    if(navigator.vibrate){
+
+      navigator.vibrate(150);
+
+    }
+
+  }
+  catch(err){
+
+    console.log(err);
+
+  }
+
+}
+
+// =======================
 // Send barcode back
 // =======================
 
 function sendBack(code){
 
   document.getElementById("result").innerHTML =
-    "已掃描: " + code;
+    "條碼: " + code;
 
   console.log("Sending:", code);
 
@@ -70,7 +179,12 @@ function sendBack(code){
 
       window.close();
 
-    },100);
+    },300);
+
+  }
+  else{
+
+    console.log("No opener window");
 
   }
 
@@ -83,75 +197,89 @@ function sendBack(code){
 const html5QrCode =
   new Html5Qrcode("reader");
 
-let scanning = false;
-
 function startScanner(){
 
-  if(scanning) return;
+  Html5Qrcode.getCameras()
 
-  scanning = true;
+  .then(devices => {
 
-  html5QrCode.start(
+    if(!devices || devices.length === 0){
 
-    {
-      facingMode:"environment"
-    },
+      document.getElementById("result").innerHTML =
+        "找不到相機";
 
-    {
-
-      fps:60,
-
-      qrbox:{
-        width:600,
-        height:250
-      },
-
-      aspectRatio:1.777,
-
-      disableFlip:true,
-
-      formatsToSupport:[
-
-        Html5QrcodeSupportedFormats.QR_CODE,
-
-        Html5QrcodeSupportedFormats.CODE_128,
-
-        Html5QrcodeSupportedFormats.EAN_13,
-
-        Html5QrcodeSupportedFormats.EAN_8,
-
-        Html5QrcodeSupportedFormats.UPC_A,
-
-        Html5QrcodeSupportedFormats.UPC_E
-
-      ]
-
-    },
-
-    function(decodedText){
-
-      if(!decodedText) return;
-
-      console.log("Detected:",decodedText);
-
-      scanning = false;
-
-      sendBack(decodedText);
-
-      html5QrCode.stop()
-      .catch(()=>{});
-
-    },
-
-    function(errorMessage){
-
-      // ignore
+      return;
 
     }
 
-  )
+    let backCamera = devices.find(device => {
 
-  .catch(err=>{
+      const label =
+        device.label.toLowerCase();
+
+      return (
+        label.includes("back") ||
+        label.includes("rear") ||
+        label.includes("environment")
+      );
+
+    });
+
+    if(!backCamera){
+
+      backCamera =
+        devices[devices.length - 1];
+
+    }
+
+    console.log(
+      "Using camera:",
+      backCamera.label
+    );
+
+    html5QrCode.start(
+
+      backCamera.id,
+
+      {
+
+        fps:30,
+
+        qrbox:{
+          width:300,
+          height:150
+        },
+
+        aspectRatio:1.777
+
+      },
+
+      function(decodedText){
+
+        console.log(
+          "Detected:",
+          decodedText
+        );
+
+        beep();
+
+        sendBack(decodedText);
+
+        html5QrCode.stop();
+
+      },
+
+      function(errorMessage){
+
+        // keep scanning
+
+      }
+
+    );
+
+  })
+
+  .catch(err => {
 
     console.error(err);
 
@@ -166,7 +294,9 @@ function startScanner(){
 // Start
 // =======================
 
-window.onload=function(){
+window.onload = function(){
+
+  initAudio();
 
   startScanner();
 
@@ -175,5 +305,4 @@ window.onload=function(){
 </script>
 
 </body>
-
 </html>
