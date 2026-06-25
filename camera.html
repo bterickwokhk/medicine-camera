@@ -33,6 +33,7 @@ body{
 
 </head>
 
+
 <body>
 
 <h2>📷 藥物條碼 / QR Code 掃描</h2>
@@ -43,7 +44,9 @@ body{
 等待掃描...
 </div>
 
+
 <script>
+
 
 // =======================
 // Send barcode back
@@ -54,7 +57,9 @@ function sendBack(code){
   document.getElementById("result").innerHTML =
     "已掃描: " + code;
 
+
   console.log("Sending:", code);
+
 
   if(window.opener){
 
@@ -66,15 +71,18 @@ function sendBack(code){
       "*"
     );
 
+
     setTimeout(function(){
 
       window.close();
 
-    },100);
+    },50);
 
   }
 
 }
+
+
 
 // =======================
 // Scanner
@@ -83,96 +91,160 @@ function sendBack(code){
 const html5QrCode =
   new Html5Qrcode("reader");
 
-let scanning = false;
+
+let scanning=false;
+
+
 
 function startScanner(){
 
+
   if(scanning) return;
 
-  scanning = true;
+
+  scanning=true;
+
+
 
   html5QrCode.start(
+
 
     {
       facingMode:"environment"
     },
 
+
     {
 
-      fps:60,
+
+      // faster stable scan
+
+      fps:30,
+
 
       qrbox:{
-        width:600,
-        height:250
+        width:350,
+        height:180
       },
 
-      aspectRatio:1.777,
 
       disableFlip:true,
 
+
       formatsToSupport:[
+
 
         Html5QrcodeSupportedFormats.QR_CODE,
 
+
         Html5QrcodeSupportedFormats.CODE_128,
+
+
+        Html5QrcodeSupportedFormats.CODE_39,
+
+
+        Html5QrcodeSupportedFormats.ITF,
+
 
         Html5QrcodeSupportedFormats.EAN_13,
 
+
         Html5QrcodeSupportedFormats.EAN_8,
+
 
         Html5QrcodeSupportedFormats.UPC_A,
 
+
         Html5QrcodeSupportedFormats.UPC_E
+
 
       ]
 
+
     },
+
 
     function(decodedText){
 
+
       if(!decodedText) return;
 
-      console.log("Detected:",decodedText);
 
-      scanning = false;
+      console.log(
+        "Detected:",
+        decodedText
+      );
 
-      sendBack(decodedText);
 
+      scanning=false;
+
+
+
+      // stop camera first
       html5QrCode.stop()
-      .catch(()=>{});
+
+      .then(function(){
+
+
+        sendBack(decodedText);
+
+
+      })
+
+
+      .catch(function(){
+
+
+        sendBack(decodedText);
+
+
+      });
+
+
 
     },
 
+
     function(errorMessage){
 
-      // ignore
+      // ignore scan errors
 
     }
 
+
   )
 
-  .catch(err=>{
+
+  .catch(function(err){
+
 
     console.error(err);
+
 
     document.getElementById("result").innerHTML =
       "無法開啟相機";
 
+
+    scanning=false;
+
+
   });
+
 
 }
 
+
+
 // =======================
-// Start
+// Start immediately
 // =======================
 
-window.onload=function(){
+startScanner();
 
-  startScanner();
 
-};
 
 </script>
+
 
 </body>
 
